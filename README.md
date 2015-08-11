@@ -182,37 +182,52 @@ vv();
 will translated to
 
 ```objectivec
-struct __block_literal_2 {
+struct __block_impl {
     void *isa;
-    int flags;
-    int reserved;
-    void (*invoke)(struct __block_literal_2 *);
-    struct __block_descriptor_2 *descriptor;
-    const int x;
+    int Flags;
+    int Reserved;
+    void *FuncPtr;
+};
+struct __main_block_impl_0 {
+    struct __block_impl impl;
+    struct __main_block_desc_0* Desc;
+    int x;
+  __main_block_impl_0(void *fp, struct __main_block_desc_0 *desc, int _x, int flags=0) : x(_x) {
+      impl.isa = &_NSConcreteStackBlock;
+      impl.Flags = flags;
+      impl.FuncPtr = fp;
+      Desc = desc;
+  }
 };
 
-void __block_invoke_2(struct __block_literal_2 *_block) {
-    printf("x is %d\n", _block->x);
+static void __main_block_func_0(struct __main_block_impl_0 *__cself) {
+    int x = __cself->x; // bound by copy
+    printf("x is %d\n", x); 
 }
 
-static struct __block_descriptor_2 {
-    unsigned long int reserved;
-    unsigned long int Block_size;
-} __block_descriptor_2 = { 0, sizeof(struct __block_literal_2) };
+static struct __main_block_desc_0 {
+    size_t reserved;
+    size_t Block_size;
+} __main_block_desc_0_DATA = { 0, sizeof(struct __main_block_impl_0)};
 ```
 
-and Block (^{ printf("x is %d\n", x); })
+and main ( with Block )
 
 ```objectivec
-struct __block_literal_2 __block_literal_2 = {
-      &_NSConcreteStackBlock,  	// isa
-      (1<<29), 					// flag
-	  <uninitialized>,			// reserved
-      __block_invoke_2,			// invoke
-      &__block_descriptor_2,	// __block_descriptor_2
-      x							// parameter x
- };
+int x = 10;
+// void (^vv)(void) = ^{ printf("x is %d\n", x); };
+// void (*vv)(void) = (void (*)())&__main_block_impl_0((void *)__main_block_func_0, &__main_block_desc_0_DATA, x);
+struct __block_impl impl = {NULL, 0, 0, (void *)__main_block_func_0};
+struct __main_block_impl_0 tmp = {impl, &__main_block_desc_0_DATA, x};
+struct __main_block_impl_0 *vv = &tmp;
+
+x = 11;
+// vv();
+// ((void (*)(__block_impl *))((__block_impl *)vv)->FuncPtr)((__block_impl *)vv);
+__block_impl *func = ((__block_impl *)vv);
+(((void (*)(__main_block_impl_0 *))func->FuncPtr)(vv));
 ```
+Compilable file: [print_var.cc]
 <br><br>
 **Block with Block**
 
@@ -376,3 +391,5 @@ http://www.opensource.apple.com/source/libclosure/libclosure-53/BlockImplementat
 [clang runtime.c]:http://opensource.apple.com/source/clang/clang-137/src/projects/compiler-rt/BlocksRuntime/runtime.c
 
 [print.cc]:https://github.com/imlunacat/objectiveC-block/blob/master/print.cc
+
+[print_var.cc]:https://github.com/imlunacat/objectiveC-block/blob/master/print_var.cc
